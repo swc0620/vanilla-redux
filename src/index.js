@@ -1,58 +1,76 @@
 import { createStore } from "redux";
 
-const add = document.getElementById("add")
-const minus = document.getElementById("minus")
-const number = document.querySelector("span")
+const form = document.querySelector("form")
+const input = document.querySelector("input")
+const ul = document.querySelector("ul")
 
-const ADD = "ADD"
-const MINUS = "MINUS"
+const ADD_TODO = "ADD_TODO"
+const DELETE_TODO = "DELETE_TODO"
 
-// in Redux, only one function should modify data
-// what 'modifier' returns becomes the state of the application
-const countModifier = (count = 0, action) => {
-  // if (action.type === "ADD") {
-  //   return count + 1;
-  // } else if (action.type === "MINUS") {
-  //   return count - 1;
-  // } else {
-  //   return count;
-  // }
+const reducer = (state = [], action) => {
   switch (action.type) {
-    case ADD:
-      return count + 1
-    case MINUS:
-      return count - 1
+    case ADD_TODO:
+      // In Redux, always return new Object. NEVER mutate the existing state
+      // wrong : state.push(action.text)
+      return [...state, { text: action.text, id: Date.now() }]
+      // return [ { text: action.text, id: Date.now() }, ...state,]
+    case DELETE_TODO:
+      return state.filter(toDo => toDo.id !== action.id)
     default:
-      return count
+      return state
   }
 }
 
-number.innerText = 0
+const store = createStore(reducer)
 
-// 'store' is where you store 'state'
-// 'state' means data that changes
-const countStore = createStore(countModifier)
+store.subscribe(() => console.log(store.getState()))
 
-const onChange = () => {
-  number.innerText = countStore.getState()
-  console.log("There was a change on the store")
+const paintToDos = () => {
+  const toDos = store.getState()
+  ul.innerText = ""
+  toDos.forEach(toDo => {
+    const li = document.createElement("li")
+    const btn = document.createElement("button")
+    btn.innerText = "DELETE"
+    btn.addEventListener("click", dispatchDeleteToDo)
+    li.id = toDo.id
+    li.innerText = toDo.text
+    li.appendChild(btn)
+    ul.appendChild(li)
+    
+  })
 }
 
-// 'subscribe' allows us to listen to changes in our 'store'
-countStore.subscribe(onChange)
+store.subscribe(paintToDos)
 
-const handleAdd = () => {
-  countStore.dispatch({ type: ADD })
+const addToDo = text => {
+  return {
+    type: ADD_TODO,
+    text
+  };
+};
+
+const deleteToDo = id => {
+  return {
+    type: DELETE_TODO,
+    id
+  };
+};
+
+const dispatchAddToDo = text => {
+  store.dispatch(addToDo(text));
+};
+
+const dispatchDeleteToDo = event => {
+  const id = parseInt(event.target.parentNode.id)
+  store.dispatch(deleteToDo(id));
+};
+
+const onSubmit = e => {
+  e.preventDefault()
+  const toDo = input.value
+  input.value = ""
+  dispatchAddToDo(toDo)
 }
 
-const handleMinus = () => {
-  countStore.dispatch({ type: MINUS })
-}
-
-add.addEventListener("click", handleAdd)
-minus.addEventListener("click", handleMinus)
-
-// with 'dispatch', we are sending message to 'modifier' in Redux
-// countStore.dispatch({ type: "ADD" })
-// countStore.dispatch({ type: "MINUS" })
-// console.log(countStore.getState())
+form.addEventListener("submit", onSubmit)
